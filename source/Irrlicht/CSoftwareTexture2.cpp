@@ -267,7 +267,7 @@ void CSoftwareTexture2::regenerateMipMapLevels(void* data)
 	if ( 0 )
 	{
 		char buf[256];
-		const char* name = getName().getPath().c_str();
+		const fschar_t* name = getName().getPath().c_str();
 		int filename = 0;
 		//int ext = -1;
 		i = 0;
