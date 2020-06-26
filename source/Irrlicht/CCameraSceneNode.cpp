@@ -20,7 +20,7 @@ CCameraSceneNode::CCameraSceneNode(ISceneNode* parent, ISceneManager* mgr, s32 i
 	BoundingBox(core::vector3df(0, 0, 0)),	// Camera has no size. Still not sure if FLT_MAX might be the better variant
 	Target(lookat), UpVector(0.0f, 1.0f, 0.0f), ZNear(1.0f), ZFar(3000.0f),
 	InputReceiverEnabled(true), TargetAndRotationAreBound(false),
-	HasD3DStyleProjectionMatrix(true)
+	HasD3DStyleProjectionMatrix(true), UseLeftHandProjection(true)
 {
 	#ifdef _DEBUG
 	setDebugName("CCameraSceneNode");
@@ -201,6 +201,10 @@ f32 CCameraSceneNode::getFOV() const
 	return Fovy;
 }
 
+bool CCameraSceneNode::getUseLeftHandProjection() const
+{
+	return UseLeftHandProjection;
+}
 
 void CCameraSceneNode::setNearValue(f32 f)
 {
@@ -231,10 +235,23 @@ void CCameraSceneNode::setFOV(f32 f)
 	recalculateProjectionMatrix();
 }
 
+void CCameraSceneNode::setUseLeftHandProjection(bool use)
+{
+	UseLeftHandProjection = use;
+	recalculateProjectionMatrix();
+}
 
 void CCameraSceneNode::recalculateProjectionMatrix()
 {
-	ViewArea.getTransform ( video::ETS_PROJECTION ).buildProjectionMatrixPerspectiveFovLH(Fovy, Aspect, ZNear, ZFar, HasD3DStyleProjectionMatrix);
+	if (UseLeftHandProjection)
+	{
+		ViewArea.getTransform(video::ETS_PROJECTION).buildProjectionMatrixPerspectiveFovLH(Fovy, Aspect, ZNear, ZFar, HasD3DStyleProjectionMatrix);
+	}
+	else
+	{
+		ViewArea.getTransform(video::ETS_PROJECTION).buildProjectionMatrixPerspectiveFovRH(Fovy, Aspect, ZNear, ZFar, HasD3DStyleProjectionMatrix);
+	}
+
 	IsOrthogonal = false;
 }
 
@@ -266,7 +283,17 @@ void CCameraSceneNode::render()
 void CCameraSceneNode::updateMatrices()
 {
 	core::vector3df pos = getAbsolutePosition();
-	core::vector3df tgtv = Target - pos;
+	core::vector3df tgtv;
+	
+	if (UseLeftHandProjection)
+	{
+		tgtv = Target - pos;
+	}
+	else
+	{
+		tgtv = pos - Target;
+	}
+
 	tgtv.normalize();
 
 	// if upvector and vector to the target are the same, we have a
@@ -281,7 +308,15 @@ void CCameraSceneNode::updateMatrices()
 		up.X += 0.5f;
 	}
 
-	ViewArea.getTransform(video::ETS_VIEW).buildCameraLookAtMatrixLH(pos, Target, up);
+	if (UseLeftHandProjection)
+	{
+		ViewArea.getTransform(video::ETS_VIEW).buildCameraLookAtMatrixLH(pos, Target, up);
+	}
+	else
+	{
+		ViewArea.getTransform(video::ETS_VIEW).buildCameraLookAtMatrixRH(pos, Target, up);
+	}
+
 	ViewArea.getTransform(video::ETS_VIEW) *= Affector;
 	recalculateViewArea();
 }

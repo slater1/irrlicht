@@ -175,13 +175,18 @@ void CSceneNodeAnimatorCameraMaya::animateNode(ISceneNode *node, u32 timeMs)
 	const core::vector3df target = camera->getTarget();
 
 	core::vector3df pos = camera->getPosition();
-	core::vector3df tvectX = pos - target;
+	const bool left = camera->getUseLeftHandProjection();
+	const core::vector3df posTarget = left
+		? pos - target
+		: target - pos;
+
+	core::vector3df tvectX = posTarget;
 	tvectX = tvectX.crossProduct(upVector);
 	tvectX.normalize();
 
 	const SViewFrustum* const va = camera->getViewFrustum();
 	core::vector3df tvectY = (va->getFarLeftDown() - va->getFarRightDown());
-	tvectY = tvectY.crossProduct(upVector.Y > 0 ? pos - target : target - pos);
+	tvectY = tvectY.crossProduct(upVector.Y > 0 ? posTarget : -posTarget);
 	tvectY.normalize();
 
 	if (isMouseKeyDown(2) && !Zooming)
@@ -237,7 +242,7 @@ void CSceneNodeAnimatorCameraMaya::animateNode(ISceneNode *node, u32 timeMs)
 	pos.X += nZoom;
 
 	pos.rotateXYBy(nRotY, translate);
-	pos.rotateXZBy(-nRotX, translate);
+	pos.rotateXZBy(left ? -nRotX : nRotX, translate);
 
 	camera->setPosition(pos);
 	camera->setTarget(translate);
@@ -247,7 +252,7 @@ void CSceneNodeAnimatorCameraMaya::animateNode(ISceneNode *node, u32 timeMs)
 	// jox: fixed bug: jitter when rotating to the top and bottom of y
 	pos.set(0,1,0);
 	pos.rotateXYBy(-nRotY);
-	pos.rotateXZBy(-nRotX+180.f);
+	pos.rotateXZBy((left ? -nRotX : nRotX )+180.f);
 	camera->setUpVector(pos);
 	LastCameraTarget = camera->getTarget();
 }
